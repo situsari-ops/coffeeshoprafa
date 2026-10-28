@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login Admin Coffeeshop</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="card">
+    <section id="login">
+      <p class="eyebrow">ADMIN COFFEESHOP</p>
+      <h1>Selamat datang</h1>
+      <p class="muted">Masuk dengan akun administrator Anda.</p>
+
+      <form id="login-form">
+        <label for="username">Username</label>
+        <input id="username" name="username" type="text" autocomplete="username" maxlength="100" required>
+
+        <label for="password">Password</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required>
+
+        <button id="login-button" type="submit">Masuk</button>
+        <p id="login-message" class="message" role="alert"></p>
+      </form>
+
+      <p class="note">Sesi berakhir saat browser ditutup atau setelah 15 menit tidak aktif.</p>
+    </section>
+
+  </main>
+
+  <script>
+    const login = document.querySelector("#login");
+    const form = document.querySelector("#login-form");
+    const loginMessage = document.querySelector("#login-message");
+    let token = "";
+
+    async function request(url, options = {}) {
+      const response = await fetch(url, { credentials: "same-origin", ...options });
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.message || "Terjadi kesalahan.");
+      return result;
+    }
+
+    request("backend.php?action=auth")
+      .then((result) => {
+        token = result.csrfToken;
+        if (result.authenticated) location.replace("dashboard.php");
+      })
+      .catch(() => {
+        loginMessage.textContent = "Server tidak dapat dihubungi. Coba muat ulang halaman.";
+      });
+
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      loginMessage.textContent = "";
+      const button = document.querySelector("#login-button");
+      button.disabled = true;
+
+      try {
+        const values = new FormData(form);
+        const result = await request("backend.php?action=login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "X-CSRF-Token": token },
+          body: JSON.stringify({
+            username: values.get("username"),
+            password: values.get("password")
+          })
+        });
+        location.href = "dashboard.php";
+      } catch (error) {
+        loginMessage.textContent = error.message;
+      } finally {
+        button.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>
